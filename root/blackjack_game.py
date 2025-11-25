@@ -246,7 +246,7 @@ class BlackjackGame:
         
         # Discard Tray
         self.discard_frame = tk.Frame(stats_frame, bg=COLORS['bg_elevated'])
-        self.discard_frame.pack(fill='both', expand=True, padx=10, pady=4)
+        self.discard_frame.pack(fill='x', padx=10, pady=4)
         
         discard_header = tk.Frame(self.discard_frame, bg=COLORS['bg_elevated'])
         discard_header.pack(fill='x', padx=8, pady=(6, 3))
@@ -259,7 +259,7 @@ class BlackjackGame:
                                    height=12, width=25, relief='flat', 
                                    state='disabled', padx=6, pady=6,
                                    selectbackground=COLORS['gold_dim'])
-        self.discard_text.pack(padx=8, pady=(0, 6), fill='both', expand=True)
+        self.discard_text.pack(padx=8, pady=(0, 6))
         
         # Toggle section
         toggle_frame = tk.Frame(self.counting_frame, bg=COLORS['bg_panel'])
@@ -446,7 +446,7 @@ class BlackjackGame:
         
         for i, (text, color, command, icon) in enumerate(action_configs):
             btn_frame = tk.Frame(buttons_frame, bg=COLORS['bg_secondary'])
-            btn_frame.grid(row=0, column=i, padx=6, pady=5)
+            btn_frame.grid(row=0, column=i, padx=6, pady=5, sticky='n')
             
             btn = tk.Button(btn_frame, text=f"{icon}\n{text}",
                            font=('Trebuchet MS', 10, 'bold'),
@@ -457,6 +457,10 @@ class BlackjackGame:
                            command=command)
             btn.pack()
             
+            # Empty label to match structure of DEAL/NEW buttons
+            tk.Label(btn_frame, text=" ", font=('Trebuchet MS', 7),
+                    bg=COLORS['bg_secondary'], fg=COLORS['text_muted']).pack()
+            
             self.action_buttons[text.lower()] = btn
             add_hover_effect(btn, color, lighten_color(color))
         
@@ -466,7 +470,7 @@ class BlackjackGame:
         
         # DEAL button
         deal_frame = tk.Frame(buttons_frame, bg=COLORS['bg_secondary'])
-        deal_frame.grid(row=0, column=4, padx=6, pady=5)
+        deal_frame.grid(row=0, column=4, padx=6, pady=5, sticky='n')
         
         self.deal_button = tk.Button(deal_frame, text="🃏\nDEAL",
                                     font=('Trebuchet MS', 10, 'bold'),
@@ -483,7 +487,7 @@ class BlackjackGame:
         
         # NEW GAME button
         new_game_frame = tk.Frame(buttons_frame, bg=COLORS['bg_secondary'])
-        new_game_frame.grid(row=0, column=5, padx=6, pady=5)
+        new_game_frame.grid(row=0, column=5, padx=6, pady=5, sticky='n')
         
         self.new_game_button = tk.Button(new_game_frame, text="🔄\nNEW",
                                         font=('Trebuchet MS', 10, 'bold'),
@@ -500,7 +504,7 @@ class BlackjackGame:
         
         # PAUSE button
         pause_frame = tk.Frame(buttons_frame, bg=COLORS['bg_secondary'])
-        pause_frame.grid(row=0, column=6, padx=6, pady=5)
+        pause_frame.grid(row=0, column=6, padx=6, pady=5, sticky='n')
         
         self.pause_button = tk.Button(pause_frame, text="⏸\nPAUSE",
                                      font=('Trebuchet MS', 10, 'bold'),
@@ -511,6 +515,10 @@ class BlackjackGame:
                                      command=self._toggle_pause)
         self.pause_button.pack()
         add_hover_effect(self.pause_button, COLORS['bg_elevated'], lighten_color(COLORS['bg_elevated']))
+        
+        # Empty label to match structure of DEAL/NEW buttons
+        tk.Label(pause_frame, text=" ", font=('Trebuchet MS', 7),
+                bg=COLORS['bg_secondary'], fg=COLORS['text_muted']).pack()
         
         # Store references
         self.hit_button = self.action_buttons['hit']
@@ -721,7 +729,7 @@ class BlackjackGame:
             self.hilo_frame.pack(fill='x', padx=10, pady=4)
             
         if self.show_discard_tray.get():
-            self.discard_frame.pack(fill='both', expand=True, padx=10, pady=4)
+            self.discard_frame.pack(fill='x', padx=10, pady=4)
             
     # ═══════════════════════════════════════════════════════════════
     # CARD MANAGEMENT
@@ -894,6 +902,11 @@ class BlackjackGame:
                 'player': player
             })
             
+    def _toggle_hilo_on_cards(self):
+        """Toggle Hi-Lo display on cards when clicked"""
+        self.show_hilo_on_cards.set(not self.show_hilo_on_cards.get())
+        self._update_display()
+    
     def _update_display(self):
         """Update the entire game display"""
         # Update dealer cards
@@ -904,7 +917,8 @@ class BlackjackGame:
             hidden = (i == 0 and not self.game_over)
             card_widget = create_card_widget(self.dealer_cards_frame, card, hidden=hidden,
                                             show_hilo=self.show_hilo_on_cards.get(),
-                                            training_mode=self.training_mode.get())
+                                            training_mode=self.training_mode.get(),
+                                            on_hilo_click=self._toggle_hilo_on_cards)
             card_widget.pack(side='left', padx=4)
             
         # Dealer score
@@ -931,7 +945,8 @@ class BlackjackGame:
             for card in player.hand:
                 card_widget = create_card_widget(card_container, card,
                                                 show_hilo=self.show_hilo_on_cards.get(),
-                                                training_mode=self.training_mode.get())
+                                                training_mode=self.training_mode.get(),
+                                                on_hilo_click=self._toggle_hilo_on_cards)
                 card_widget.pack(side='left', padx=3)
                 
             # Update score

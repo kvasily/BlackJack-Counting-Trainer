@@ -357,7 +357,7 @@ def _draw_card_pips(canvas, rank, suit_symbol, suit_color, card_x, card_y, card_
 
 
 def create_card_front_canvas(parent, card, show_hilo=True, training_mode=True, 
-                             width=CARD_WIDTH, height=CARD_HEIGHT):
+                             width=CARD_WIDTH, height=CARD_HEIGHT, on_hilo_click=None):
     """
     Create a classic flat-style card front using Canvas.
     
@@ -368,6 +368,7 @@ def create_card_front_canvas(parent, card, show_hilo=True, training_mode=True,
         training_mode: If True, Hi-Lo values can be shown
         width: Card width in pixels
         height: Card height in pixels
+        on_hilo_click: Optional callback when Hi-Lo badge is clicked
         
     Returns:
         Canvas widget representing card front
@@ -477,6 +478,11 @@ def create_card_front_canvas(parent, card, show_hilo=True, training_mode=True,
                    card_left, card_top, card_w, card_h)
     
     # Hi-Lo indicator (if training mode)
+    # Hi-Lo badge position (used for click area even when hidden)
+    badge_y = card_bottom - 18
+    badge_width = 28
+    badge_height = 18
+    
     if show_hilo and training_mode:
         hilo = get_hilo_value(card)
         if hilo > 0:
@@ -492,31 +498,44 @@ def create_card_front_canvas(parent, card, show_hilo=True, training_mode=True,
             hilo_text = "0"
             badge_bg = '#3d3d1a'  # Dark yellow background
         
-        # Hi-Lo badge - scaled for larger cards
-        badge_y = card_bottom - 18
-        badge_width = 28
-        badge_height = 18
-        
         # Rounded rectangle badge
         create_rounded_rect(
             canvas,
             center_x - badge_width // 2, badge_y - badge_height // 2,
             center_x + badge_width // 2, badge_y + badge_height // 2,
             5,
-            fill=badge_bg, outline=hilo_color, width=1
+            fill=badge_bg, outline=hilo_color, width=1,
+            tags='hilo_badge'
         )
         canvas.create_text(
             center_x, badge_y,
             text=hilo_text,
             font=('Consolas', 11, 'bold'),
             fill=hilo_color,
-            anchor='center'
+            anchor='center',
+            tags='hilo_badge'
         )
+    
+    # Bind click handler to the Hi-Lo badge area (works even when hidden for toggle)
+    if on_hilo_click and training_mode:
+        # Create invisible clickable area at badge position
+        click_area = canvas.create_rectangle(
+            center_x - badge_width // 2 - 5, badge_y - badge_height // 2 - 5,
+            center_x + badge_width // 2 + 5, badge_y + badge_height // 2 + 5,
+            fill='', outline='', tags='hilo_click'
+        )
+        canvas.tag_bind('hilo_click', '<Button-1>', lambda e: on_hilo_click())
+        canvas.tag_bind('hilo_badge', '<Button-1>', lambda e: on_hilo_click())
+        # Change cursor on hover over badge area
+        canvas.tag_bind('hilo_click', '<Enter>', lambda e: canvas.config(cursor='hand2'))
+        canvas.tag_bind('hilo_click', '<Leave>', lambda e: canvas.config(cursor=''))
+        canvas.tag_bind('hilo_badge', '<Enter>', lambda e: canvas.config(cursor='hand2'))
+        canvas.tag_bind('hilo_badge', '<Leave>', lambda e: canvas.config(cursor=''))
     
     return canvas
 
 
-def create_card_widget(parent, card, hidden=False, show_hilo=True, training_mode=True):
+def create_card_widget(parent, card, hidden=False, show_hilo=True, training_mode=True, on_hilo_click=None):
     """
     Create a premium card widget using Canvas rendering.
     
@@ -526,6 +545,7 @@ def create_card_widget(parent, card, hidden=False, show_hilo=True, training_mode
         hidden: If True, show card back
         show_hilo: If True and training_mode, show Hi-Lo value
         training_mode: If True, Hi-Lo values can be shown
+        on_hilo_click: Optional callback when Hi-Lo badge is clicked
         
     Returns:
         Canvas widget for the card
@@ -533,7 +553,7 @@ def create_card_widget(parent, card, hidden=False, show_hilo=True, training_mode
     if hidden:
         return create_card_back_canvas(parent)
     else:
-        return create_card_front_canvas(parent, card, show_hilo, training_mode)
+        return create_card_front_canvas(parent, card, show_hilo, training_mode, on_hilo_click=on_hilo_click)
 
 
 def create_mini_card_back(parent, width=30, height=42):
