@@ -65,28 +65,6 @@ def create_rounded_rect(canvas, x1, y1, x2, y2, radius, **kwargs):
     return canvas.create_polygon(points, smooth=True, **kwargs)
 
 
-def draw_diamond_pattern(canvas, x, y, width, height, pattern_color, spacing=10):
-    """Draw a classic diamond/rhombus pattern on the card back, clipped to bounds"""
-    # Draw small diamond shapes in a grid pattern (stays within bounds)
-    diamond_size = spacing // 2
-    
-    for row in range(0, height, spacing):
-        for col in range(0, width, spacing):
-            cx = x + col + spacing // 2
-            cy = y + row + spacing // 2
-            
-            # Only draw if fully within bounds
-            if cx - diamond_size >= x and cx + diamond_size <= x + width and \
-               cy - diamond_size >= y and cy + diamond_size <= y + height:
-                canvas.create_polygon(
-                    cx, cy - diamond_size,
-                    cx + diamond_size, cy,
-                    cx, cy + diamond_size,
-                    cx - diamond_size, cy,
-                    outline=pattern_color, fill='', width=1
-                )
-
-
 def create_card_back_canvas(parent, width=CARD_WIDTH, height=CARD_HEIGHT):
     """
     Create an elegant card back with diamond pattern using Canvas.
@@ -102,17 +80,21 @@ def create_card_back_canvas(parent, width=CARD_WIDTH, height=CARD_HEIGHT):
         highlightthickness=0
     )
     
-    # Card dimensions (with padding for shadow)
-    card_x = 2
-    card_y = 2
-    card_w = width - 6
-    card_h = height - 6
+    # Card bounds - same as front card for consistency
+    padding = 3
+    shadow_offset = 2
+    card_left = padding
+    card_top = padding
+    card_right = width - padding - shadow_offset
+    card_bottom = height - padding - shadow_offset
+    card_w = card_right - card_left
+    card_h = card_bottom - card_top
     
-    # Card shadow (offset slightly)
+    # Card shadow
     create_rounded_rect(
         canvas, 
-        card_x + 2, card_y + 2, 
-        card_x + card_w + 2, card_y + card_h + 2,
+        card_left + shadow_offset, card_top + shadow_offset, 
+        card_right + shadow_offset, card_bottom + shadow_offset,
         CARD_CORNER_RADIUS,
         fill='#1a1512', outline=''
     )
@@ -120,60 +102,258 @@ def create_card_back_canvas(parent, width=CARD_WIDTH, height=CARD_HEIGHT):
     # Main card background - rich burgundy
     create_rounded_rect(
         canvas, 
-        card_x, card_y, card_x + card_w, card_y + card_h,
+        card_left, card_top, card_right, card_bottom,
         CARD_CORNER_RADIUS,
-        fill=COLORS['card_back'], outline=darken_color(COLORS['card_back'], 0.7), width=1
+        fill=COLORS['card_back'], outline=darken_color(COLORS['card_back'], 0.7), width=2
     )
     
     # Outer decorative border
-    border_margin = 5
+    border_margin = 8
+    inner_left = card_left + border_margin
+    inner_top = card_top + border_margin
+    inner_right = card_right - border_margin
+    inner_bottom = card_bottom - border_margin
+    
     create_rounded_rect(
         canvas,
-        card_x + border_margin, card_y + border_margin, 
-        card_x + card_w - border_margin, card_y + card_h - border_margin,
-        CARD_CORNER_RADIUS - 2,
-        fill='', outline=COLORS['card_back_pattern'], width=1
+        inner_left, inner_top, inner_right, inner_bottom,
+        CARD_CORNER_RADIUS - 3,
+        fill='', outline=COLORS['card_back_pattern'], width=2
     )
     
-    # Diamond pattern area (well within card bounds)
+    # Inner area for pattern
     pattern_margin = 12
-    pattern_x = card_x + pattern_margin
-    pattern_y = card_y + pattern_margin
-    pattern_w = card_w - pattern_margin * 2
-    pattern_h = card_h - pattern_margin * 2
+    pattern_left = card_left + pattern_margin
+    pattern_top = card_top + pattern_margin
+    pattern_right = card_right - pattern_margin
+    pattern_bottom = card_bottom - pattern_margin
+    pattern_w = pattern_right - pattern_left
+    pattern_h = pattern_bottom - pattern_top
     
-    # Draw the diamond pattern (constrained to inner area)
-    draw_diamond_pattern(
-        canvas, 
-        pattern_x, pattern_y, 
-        pattern_w, pattern_h,
-        COLORS['card_back_pattern'],
-        spacing=12
-    )
+    # Draw crosshatch/diamond pattern using lines
+    line_spacing = 12
+    pattern_color = COLORS['card_back_pattern']
     
-    # Inner decorative border
-    inner_margin = 8
+    # Diagonal lines from top-left to bottom-right
+    for i in range(-int(pattern_h), int(pattern_w) + int(pattern_h), line_spacing):
+        x1 = pattern_left + i
+        y1 = pattern_top
+        x2 = pattern_left + i + pattern_h
+        y2 = pattern_bottom
+        
+        # Clip to pattern bounds
+        if x1 < pattern_left:
+            y1 = pattern_top + (pattern_left - x1)
+            x1 = pattern_left
+        if x2 > pattern_right:
+            y2 = pattern_bottom - (x2 - pattern_right)
+            x2 = pattern_right
+        if y1 < pattern_top or y2 > pattern_bottom:
+            continue
+        if x1 <= pattern_right and x2 >= pattern_left:
+            canvas.create_line(x1, y1, x2, y2, fill=pattern_color, width=1)
+    
+    # Diagonal lines from top-right to bottom-left
+    for i in range(-int(pattern_h), int(pattern_w) + int(pattern_h), line_spacing):
+        x1 = pattern_right - i
+        y1 = pattern_top
+        x2 = pattern_right - i - pattern_h
+        y2 = pattern_bottom
+        
+        # Clip to pattern bounds
+        if x1 > pattern_right:
+            y1 = pattern_top + (x1 - pattern_right)
+            x1 = pattern_right
+        if x2 < pattern_left:
+            y2 = pattern_bottom - (pattern_left - x2)
+            x2 = pattern_left
+        if y1 < pattern_top or y2 > pattern_bottom:
+            continue
+        if x1 >= pattern_left and x2 <= pattern_right:
+            canvas.create_line(x1, y1, x2, y2, fill=pattern_color, width=1)
+    
+    # Inner decorative border (covers pattern edges)
     create_rounded_rect(
         canvas,
-        card_x + inner_margin, card_y + inner_margin, 
-        card_x + card_w - inner_margin, card_y + card_h - inner_margin,
-        CARD_CORNER_RADIUS - 2,
-        fill='', outline=COLORS['card_back_pattern'], width=1
+        inner_left, inner_top, inner_right, inner_bottom,
+        CARD_CORNER_RADIUS - 3,
+        fill='', outline=COLORS['card_back_pattern'], width=2
     )
     
-    # Center ornament - small diamond
-    center_x = card_x + card_w // 2
-    center_y = card_y + card_h // 2
-    ornament_size = 6
+    # Center ornament - larger diamond with fill
+    center_x = card_left + card_w // 2
+    center_y = card_top + card_h // 2
+    ornament_size = 10
+    
+    # Diamond background
+    canvas.create_polygon(
+        center_x, center_y - ornament_size - 2,
+        center_x + ornament_size + 2, center_y,
+        center_x, center_y + ornament_size + 2,
+        center_x - ornament_size - 2, center_y,
+        fill=COLORS['card_back'], outline=''
+    )
+    # Diamond outline
     canvas.create_polygon(
         center_x, center_y - ornament_size,
         center_x + ornament_size, center_y,
         center_x, center_y + ornament_size,
         center_x - ornament_size, center_y,
-        fill=COLORS['card_back_pattern'], outline=''
+        fill=COLORS['card_back_pattern'], outline=darken_color(COLORS['card_back_pattern'], 0.8), width=1
     )
     
     return canvas
+
+
+def _draw_card_pips(canvas, rank, suit_symbol, suit_color, card_x, card_y, card_w, card_h):
+    """
+    Draw traditional playing card pip patterns.
+    
+    Args:
+        canvas: The canvas to draw on
+        rank: Card rank (2-10, J, Q, K, A)
+        suit_symbol: The suit symbol character
+        suit_color: Color for the pips
+        card_x, card_y: Top-left corner of card content area
+        card_w, card_h: Width and height of card content area
+    """
+    # Define the pip area (leaving room for corner numbers)
+    # More generous margins to avoid overlap with corner text
+    pip_area_top = card_y + card_h * 0.28
+    pip_area_bottom = card_y + card_h * 0.72
+    pip_area_left = card_x + card_w * 0.22
+    pip_area_right = card_x + card_w * 0.78
+    
+    pip_area_h = pip_area_bottom - pip_area_top
+    pip_area_w = pip_area_right - pip_area_left
+    
+    # Column positions (left, center, right)
+    left_x = pip_area_left
+    center_x = card_x + card_w // 2
+    right_x = pip_area_right
+    
+    # Row positions within pip area
+    top_y = pip_area_top
+    row_2 = pip_area_top + pip_area_h * 0.25
+    mid_y = pip_area_top + pip_area_h * 0.5
+    row_4 = pip_area_top + pip_area_h * 0.75
+    bottom_y = pip_area_bottom
+    
+    # Pip font size - scaled for larger cards
+    pip_font = ('Arial', 13)
+    pip_font_large = ('Arial', 28)
+    pip_font_face = ('Georgia', 20, 'bold')
+    
+    def draw_pip(x, y, inverted=False, font=pip_font):
+        """Draw a single pip, optionally inverted"""
+        canvas.create_text(x, y, text=suit_symbol, font=font, 
+                          fill=suit_color, anchor='center', 
+                          angle=180 if inverted else 0)
+    
+    if rank == 'A':
+        # Ace - one large center pip
+        draw_pip(center_x, card_y + card_h // 2, font=pip_font_large)
+        
+    elif rank == '2':
+        # Two pips - top and bottom center
+        draw_pip(center_x, top_y)
+        draw_pip(center_x, bottom_y, inverted=True)
+        
+    elif rank == '3':
+        # Three pips - column of three
+        draw_pip(center_x, top_y)
+        draw_pip(center_x, mid_y)
+        draw_pip(center_x, bottom_y, inverted=True)
+        
+    elif rank == '4':
+        # Four pips - corners of pip area
+        draw_pip(left_x, top_y)
+        draw_pip(right_x, top_y)
+        draw_pip(left_x, bottom_y, inverted=True)
+        draw_pip(right_x, bottom_y, inverted=True)
+        
+    elif rank == '5':
+        # Five pips - corners plus center
+        draw_pip(left_x, top_y)
+        draw_pip(right_x, top_y)
+        draw_pip(center_x, mid_y)
+        draw_pip(left_x, bottom_y, inverted=True)
+        draw_pip(right_x, bottom_y, inverted=True)
+        
+    elif rank == '6':
+        # Six pips - two columns of three
+        draw_pip(left_x, top_y)
+        draw_pip(right_x, top_y)
+        draw_pip(left_x, mid_y)
+        draw_pip(right_x, mid_y)
+        draw_pip(left_x, bottom_y, inverted=True)
+        draw_pip(right_x, bottom_y, inverted=True)
+        
+    elif rank == '7':
+        # Seven pips - six in grid plus one upper center
+        draw_pip(left_x, top_y)
+        draw_pip(right_x, top_y)
+        draw_pip(center_x, row_2)
+        draw_pip(left_x, mid_y)
+        draw_pip(right_x, mid_y)
+        draw_pip(left_x, bottom_y, inverted=True)
+        draw_pip(right_x, bottom_y, inverted=True)
+        
+    elif rank == '8':
+        # Eight pips - six in grid plus two center
+        draw_pip(left_x, top_y)
+        draw_pip(right_x, top_y)
+        draw_pip(center_x, row_2)
+        draw_pip(left_x, mid_y)
+        draw_pip(right_x, mid_y)
+        draw_pip(center_x, row_4, inverted=True)
+        draw_pip(left_x, bottom_y, inverted=True)
+        draw_pip(right_x, bottom_y, inverted=True)
+        
+    elif rank == '9':
+        # Nine pips - 4-1-4 pattern
+        third_h = pip_area_h / 3
+        draw_pip(left_x, top_y)
+        draw_pip(right_x, top_y)
+        draw_pip(left_x, top_y + third_h)
+        draw_pip(right_x, top_y + third_h)
+        draw_pip(center_x, mid_y)
+        draw_pip(left_x, bottom_y - third_h, inverted=True)
+        draw_pip(right_x, bottom_y - third_h, inverted=True)
+        draw_pip(left_x, bottom_y, inverted=True)
+        draw_pip(right_x, bottom_y, inverted=True)
+        
+    elif rank == '10':
+        # Ten pips - 4-2-4 pattern
+        third_h = pip_area_h / 3
+        draw_pip(left_x, top_y)
+        draw_pip(right_x, top_y)
+        draw_pip(center_x, top_y + third_h * 0.5)
+        draw_pip(left_x, top_y + third_h)
+        draw_pip(right_x, top_y + third_h)
+        draw_pip(left_x, bottom_y - third_h, inverted=True)
+        draw_pip(right_x, bottom_y - third_h, inverted=True)
+        draw_pip(center_x, bottom_y - third_h * 0.5, inverted=True)
+        draw_pip(left_x, bottom_y, inverted=True)
+        draw_pip(right_x, bottom_y, inverted=True)
+        
+    elif rank in ['J', 'Q', 'K']:
+        # Face cards - letter with suit
+        face_center_y = card_y + card_h // 2
+        canvas.create_text(
+            center_x, face_center_y - 8,
+            text=rank,
+            font=pip_font_face,
+            fill=suit_color,
+            anchor='center'
+        )
+        canvas.create_text(
+            center_x, face_center_y + 16,
+            text=suit_symbol,
+            font=('Arial', 16),
+            fill=suit_color,
+            anchor='center'
+        )
 
 
 def create_card_front_canvas(parent, card, show_hilo=True, training_mode=True, 
@@ -246,84 +426,55 @@ def create_card_front_canvas(parent, card, show_hilo=True, training_mode=True,
     center_x = card_left + card_w // 2
     center_y = card_top + card_h // 2
     
-    # Corner text positioning - keep well inside card edges
-    corner_inset = 6
+    # Corner text positioning - scaled for larger cards
+    corner_x = 13  # Distance from left/right edge to center of text
+    corner_y = 15  # Distance from top/bottom edge to center of text
     
-    # Rank display
+    # Rank display - larger fonts for bigger cards
     rank_display = rank
-    rank_font_size = 9 if rank == '10' else 10
-    suit_font_size = 8
+    rank_font_size = 11 if rank == '10' else 13
+    suit_font_size = 10
     
-    # Top-left rank and suit
+    # Determine if we should show corner suits (only for A, J, Q, K)
+    show_corner_suits = rank in ['A', 'J', 'Q', 'K']
+    
+    # Top-left corner
     canvas.create_text(
-        card_left + corner_inset, card_top + corner_inset,
+        card_left + corner_x, card_top + corner_y,
         text=rank_display,
-        font=('Georgia', rank_font_size, 'bold'),
+        font=('Arial', rank_font_size, 'bold'),
         fill=suit_color,
-        anchor='nw'
+        anchor='center'
     )
-    canvas.create_text(
-        card_left + corner_inset + 1, card_top + corner_inset + 13,
-        text=suit_symbol,
-        font=('Arial', suit_font_size),
-        fill=suit_color,
-        anchor='nw'
-    )
+    if show_corner_suits:
+        canvas.create_text(
+            card_left + corner_x, card_top + corner_y + 13,
+            text=suit_symbol,
+            font=('Arial', suit_font_size),
+            fill=suit_color,
+            anchor='center'
+        )
     
-    # Bottom-right rank and suit (no rotation - just position at bottom right)
+    # Bottom-right corner
+    if show_corner_suits:
+        canvas.create_text(
+            card_right - corner_x, card_bottom - corner_y - 13,
+            text=suit_symbol,
+            font=('Arial', suit_font_size),
+            fill=suit_color,
+            anchor='center'
+        )
     canvas.create_text(
-        card_right - corner_inset, card_bottom - corner_inset - 13,
-        text=suit_symbol,
-        font=('Arial', suit_font_size),
-        fill=suit_color,
-        anchor='se'
-    )
-    canvas.create_text(
-        card_right - corner_inset - 1, card_bottom - corner_inset,
+        card_right - corner_x, card_bottom - corner_y,
         text=rank_display,
-        font=('Georgia', rank_font_size, 'bold'),
+        font=('Arial', rank_font_size, 'bold'),
         fill=suit_color,
-        anchor='se'
+        anchor='center'
     )
     
-    # Center content - adjust position if hi-lo badge is shown
-    center_y_adjust = -5 if (show_hilo and training_mode) else 0
-    
-    # Center suit/face symbol - use smaller fonts to fit
-    if rank in ['J', 'Q', 'K']:
-        # Face card - letter and suit
-        canvas.create_text(
-            center_x, center_y - 5 + center_y_adjust,
-            text=rank,
-            font=('Georgia', 14, 'bold'),
-            fill=suit_color,
-            anchor='center'
-        )
-        canvas.create_text(
-            center_x, center_y + 10 + center_y_adjust,
-            text=suit_symbol,
-            font=('Arial', 12),
-            fill=suit_color,
-            anchor='center'
-        )
-    elif rank == 'A':
-        # Ace - larger suit
-        canvas.create_text(
-            center_x, center_y + center_y_adjust,
-            text=suit_symbol,
-            font=('Arial', 22),
-            fill=suit_color,
-            anchor='center'
-        )
-    else:
-        # Number card - medium suit
-        canvas.create_text(
-            center_x, center_y + center_y_adjust,
-            text=suit_symbol,
-            font=('Arial', 18),
-            fill=suit_color,
-            anchor='center'
-        )
+    # Draw pips based on card rank - traditional playing card layout
+    _draw_card_pips(canvas, rank, suit_symbol, suit_color, 
+                   card_left, card_top, card_w, card_h)
     
     # Hi-Lo indicator (if training mode)
     if show_hilo and training_mode:
@@ -341,23 +492,23 @@ def create_card_front_canvas(parent, card, show_hilo=True, training_mode=True,
             hilo_text = "0"
             badge_bg = '#3d3d1a'  # Dark yellow background
         
-        # Hi-Lo badge - larger and positioned below center content
-        badge_y = card_bottom - 16
-        badge_width = 22
-        badge_height = 14
+        # Hi-Lo badge - scaled for larger cards
+        badge_y = card_bottom - 18
+        badge_width = 28
+        badge_height = 18
         
         # Rounded rectangle badge
         create_rounded_rect(
             canvas,
             center_x - badge_width // 2, badge_y - badge_height // 2,
             center_x + badge_width // 2, badge_y + badge_height // 2,
-            4,
+            5,
             fill=badge_bg, outline=hilo_color, width=1
         )
         canvas.create_text(
             center_x, badge_y,
             text=hilo_text,
-            font=('Consolas', 10, 'bold'),
+            font=('Consolas', 11, 'bold'),
             fill=hilo_color,
             anchor='center'
         )

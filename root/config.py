@@ -110,7 +110,7 @@ ANIMATION_ARC_HEIGHT = 80         # Peak height of arc in pixels
 # ═══════════════════════════════════════════════════════════════
 # CARD DIMENSIONS
 # ═══════════════════════════════════════════════════════════════
-CARD_WIDTH = 80
-CARD_HEIGHT = 115
-CARD_CORNER_RADIUS = 6
+CARD_WIDTH = 110
+CARD_HEIGHT = 154
+CARD_CORNER_RADIUS = 8
 

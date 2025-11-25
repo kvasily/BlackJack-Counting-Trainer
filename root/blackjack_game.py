@@ -51,6 +51,7 @@ class BlackjackGame:
         self.show_true_count = tk.BooleanVar(value=True)
         self.show_discard_tray = tk.BooleanVar(value=True)
         self.show_hilo_chart = tk.BooleanVar(value=True)
+        self.show_hilo_on_cards = tk.BooleanVar(value=True)  # Hi-Lo values on cards
         self.training_mode = tk.BooleanVar(value=True)
         
         # Game state
@@ -80,6 +81,10 @@ class BlackjackGame:
         self._setup_gui()
         self.settings_window = None
         
+        # Initialize displays
+        self._update_counting_display()
+        self._update_discard_display()
+        
     # ═══════════════════════════════════════════════════════════════
     # UI SETUP METHODS
     # ═══════════════════════════════════════════════════════════════
@@ -107,22 +112,22 @@ class BlackjackGame:
         
     def _setup_header(self):
         """Create the header bar"""
-        header_container = tk.Frame(self.main_container, bg=COLORS['bg_secondary'], height=80)
+        header_container = tk.Frame(self.main_container, bg=COLORS['bg_secondary'], height=60)
         header_container.pack(fill='x')
         header_container.pack_propagate(False)
         
         # Left section - Settings
         left_section = tk.Frame(header_container, bg=COLORS['bg_secondary'])
-        left_section.pack(side='left', padx=20, fill='y')
+        left_section.pack(side='left', padx=15, fill='y')
         
-        settings_btn = tk.Button(left_section, text="⚙  SETTINGS", 
-                                font=('Trebuchet MS', 10, 'bold'),
+        settings_btn = tk.Button(left_section, text="⚙ SETTINGS", 
+                                font=('Trebuchet MS', 9, 'bold'),
                                 bg=COLORS['bg_elevated'], fg=COLORS['text_secondary'],
-                                relief='flat', cursor='hand2', padx=20, pady=8,
+                                relief='flat', cursor='hand2', padx=12, pady=4,
                                 activebackground=COLORS['bg_panel'],
                                 activeforeground=COLORS['gold'],
                                 command=self._show_settings)
-        settings_btn.pack(side='left', pady=20)
+        settings_btn.pack(side='left', pady=12)
         add_hover_effect(settings_btn, COLORS['bg_elevated'], COLORS['bg_panel'])
         
         # Center section - Title
@@ -132,36 +137,36 @@ class BlackjackGame:
         title_frame = tk.Frame(center_section, bg=COLORS['bg_secondary'])
         title_frame.pack(expand=True)
         
-        tk.Label(title_frame, text="♠ ♥", font=('Times New Roman', 20),
-                bg=COLORS['bg_secondary'], fg=COLORS['gold_dim']).pack(side='left', padx=10)
+        tk.Label(title_frame, text="♠ ♥", font=('Times New Roman', 16),
+                bg=COLORS['bg_secondary'], fg=COLORS['gold_dim']).pack(side='left', padx=8)
         
         tk.Label(title_frame, text="PRIVATE CLUB",
-                font=('Palatino Linotype', 26, 'bold'),
+                font=('Palatino Linotype', 20, 'bold'),
                 bg=COLORS['bg_secondary'], fg=COLORS['gold']).pack(side='left')
         
-        tk.Label(title_frame, text="♦ ♣", font=('Times New Roman', 20),
-                bg=COLORS['bg_secondary'], fg=COLORS['gold_dim']).pack(side='left', padx=10)
+        tk.Label(title_frame, text="♦ ♣", font=('Times New Roman', 16),
+                bg=COLORS['bg_secondary'], fg=COLORS['gold_dim']).pack(side='left', padx=8)
         
         tk.Label(center_section, text="CARD COUNTING TRAINER",
-                font=('Trebuchet MS', 11, 'bold'),
+                font=('Trebuchet MS', 9, 'bold'),
                 bg=COLORS['bg_secondary'], fg=COLORS['text_muted']).pack()
         
         # Right section - Info and mode
         right_section = tk.Frame(header_container, bg=COLORS['bg_secondary'])
-        right_section.pack(side='right', padx=20, fill='y')
+        right_section.pack(side='right', padx=15, fill='y')
         
         self.deck_info_label = tk.Label(right_section, text="DECK: 52/52",
-                                       font=('Consolas', 10),
+                                       font=('Consolas', 9),
                                        bg=COLORS['bg_secondary'], fg=COLORS['text_muted'])
-        self.deck_info_label.pack(side='top', pady=(15, 5))
+        self.deck_info_label.pack(side='top', pady=(10, 3))
         
         self.mode_btn = tk.Button(right_section, text="🎓 TRAINING", 
-                                 font=('Trebuchet MS', 10, 'bold'),
+                                 font=('Trebuchet MS', 9, 'bold'),
                                  bg=COLORS['emerald_dark'], fg=COLORS['text_primary'],
-                                 relief='flat', cursor='hand2', padx=15, pady=5,
+                                 relief='flat', cursor='hand2', padx=10, pady=2,
                                  activebackground=COLORS['emerald'],
                                  command=self._toggle_mode)
-        self.mode_btn.pack(side='top', pady=5)
+        self.mode_btn.pack(side='top', pady=2)
         
     def _setup_table_decoration(self):
         """Add decorative border to game table"""
@@ -173,24 +178,24 @@ class BlackjackGame:
         
     def _setup_counting_panel(self):
         """Create the counting information panel"""
-        panel_container = tk.Frame(self.content_frame, bg=COLORS['bg_secondary'], width=320)
-        panel_container.pack(side='right', fill='y', padx=(15, 0))
+        panel_container = tk.Frame(self.content_frame, bg=COLORS['bg_secondary'], width=280)
+        panel_container.pack(side='right', fill='y', padx=(10, 0))
         panel_container.pack_propagate(False)
         
         self.counting_frame = tk.Frame(panel_container, bg=COLORS['bg_secondary'])
         self.counting_frame.pack(fill='both', expand=True, padx=2, pady=2)
         
         # Panel header
-        header = tk.Frame(self.counting_frame, bg=COLORS['bg_panel'], height=50)
+        header = tk.Frame(self.counting_frame, bg=COLORS['bg_panel'], height=35)
         header.pack(fill='x')
         header.pack_propagate(False)
         
-        tk.Label(header, text="📊  CARD COUNTING", font=('Trebuchet MS', 13, 'bold'),
+        tk.Label(header, text="📊 CARD COUNTING", font=('Trebuchet MS', 11, 'bold'),
                 bg=COLORS['bg_panel'], fg=COLORS['gold']).pack(expand=True)
         
         # Stats container
         stats_frame = tk.Frame(self.counting_frame, bg=COLORS['bg_secondary'])
-        stats_frame.pack(fill='both', expand=True, pady=10)
+        stats_frame.pack(fill='both', expand=True, pady=5)
         
         # Running Count
         self.running_count_frame = self._create_stat_card(stats_frame, "RUNNING COUNT", "0", COLORS['success'])
@@ -200,68 +205,68 @@ class BlackjackGame:
         
         # Cards remaining
         cards_frame = tk.Frame(stats_frame, bg=COLORS['bg_elevated'], relief='flat')
-        cards_frame.pack(fill='x', padx=15, pady=8)
+        cards_frame.pack(fill='x', padx=10, pady=4)
         
         cards_inner = tk.Frame(cards_frame, bg=COLORS['bg_elevated'])
-        cards_inner.pack(fill='x', padx=15, pady=12)
+        cards_inner.pack(fill='x', padx=10, pady=6)
         
-        tk.Label(cards_inner, text="CARDS REMAINING", font=('Trebuchet MS', 9),
+        tk.Label(cards_inner, text="CARDS LEFT", font=('Trebuchet MS', 8),
                 bg=COLORS['bg_elevated'], fg=COLORS['text_muted']).pack()
         self.cards_remaining_label = tk.Label(cards_inner, text="52",
-                                             font=('Consolas', 22, 'bold'),
+                                             font=('Consolas', 16, 'bold'),
                                              bg=COLORS['bg_elevated'], fg=COLORS['text_primary'])
         self.cards_remaining_label.pack()
         
         # Hi-Lo Reference Chart
         self.hilo_frame = tk.Frame(stats_frame, bg=COLORS['bg_elevated'])
-        self.hilo_frame.pack(fill='x', padx=15, pady=8)
+        self.hilo_frame.pack(fill='x', padx=10, pady=4)
         
         hilo_inner = tk.Frame(self.hilo_frame, bg=COLORS['bg_elevated'])
-        hilo_inner.pack(fill='x', padx=15, pady=12)
+        hilo_inner.pack(fill='x', padx=8, pady=6)
         
-        tk.Label(hilo_inner, text="HI-LO QUICK REFERENCE", font=('Trebuchet MS', 9, 'bold'),
-                bg=COLORS['bg_elevated'], fg=COLORS['gold']).pack(pady=(0, 10))
+        tk.Label(hilo_inner, text="HI-LO REFERENCE", font=('Trebuchet MS', 8, 'bold'),
+                bg=COLORS['bg_elevated'], fg=COLORS['gold']).pack(pady=(0, 5))
         
         chart = tk.Frame(hilo_inner, bg=COLORS['bg_elevated'])
         chart.pack()
         
         for value, cards, color in [
-            ("+1", "2 3 4 5 6", COLORS['success']),
-            (" 0", "7 8 9", COLORS['warning']),
-            ("-1", "10 J Q K A", COLORS['danger'])
+            ("+1", "2-6", COLORS['success']),
+            (" 0", "7-9", COLORS['warning']),
+            ("-1", "10-A", COLORS['danger'])
         ]:
             row = tk.Frame(chart, bg=COLORS['bg_elevated'])
-            row.pack(fill='x', pady=2)
-            tk.Label(row, text=value, font=('Consolas', 11, 'bold'), width=3,
+            row.pack(fill='x', pady=1)
+            tk.Label(row, text=value, font=('Consolas', 9, 'bold'), width=3,
                     bg=COLORS['bg_elevated'], fg=color).pack(side='left')
-            tk.Label(row, text="→", font=('Arial', 10),
-                    bg=COLORS['bg_elevated'], fg=COLORS['text_muted']).pack(side='left', padx=5)
-            tk.Label(row, text=cards, font=('Consolas', 11),
+            tk.Label(row, text="→", font=('Arial', 8),
+                    bg=COLORS['bg_elevated'], fg=COLORS['text_muted']).pack(side='left', padx=3)
+            tk.Label(row, text=cards, font=('Consolas', 9),
                     bg=COLORS['bg_elevated'], fg=COLORS['text_secondary']).pack(side='left')
         
         # Discard Tray
         self.discard_frame = tk.Frame(stats_frame, bg=COLORS['bg_elevated'])
-        self.discard_frame.pack(fill='both', expand=True, padx=15, pady=8)
+        self.discard_frame.pack(fill='both', expand=True, padx=10, pady=4)
         
         discard_header = tk.Frame(self.discard_frame, bg=COLORS['bg_elevated'])
-        discard_header.pack(fill='x', padx=15, pady=(12, 5))
+        discard_header.pack(fill='x', padx=8, pady=(6, 3))
         
-        tk.Label(discard_header, text="DISCARD TRAY", font=('Trebuchet MS', 9, 'bold'),
+        tk.Label(discard_header, text="DISCARD TRAY", font=('Trebuchet MS', 8, 'bold'),
                 bg=COLORS['bg_elevated'], fg=COLORS['gold']).pack()
         
-        self.discard_text = tk.Text(self.discard_frame, font=('Consolas', 9),
+        self.discard_text = tk.Text(self.discard_frame, font=('Consolas', 8),
                                    bg=COLORS['bg_panel'], fg=COLORS['text_secondary'],
-                                   height=10, width=30, relief='flat', 
-                                   state='disabled', padx=10, pady=10,
+                                   height=12, width=25, relief='flat', 
+                                   state='disabled', padx=6, pady=6,
                                    selectbackground=COLORS['gold_dim'])
-        self.discard_text.pack(padx=15, pady=(0, 12), fill='both', expand=True)
+        self.discard_text.pack(padx=8, pady=(0, 6), fill='both', expand=True)
         
         # Toggle section
         toggle_frame = tk.Frame(self.counting_frame, bg=COLORS['bg_panel'])
         toggle_frame.pack(fill='x', side='bottom')
         
         toggle_inner = tk.Frame(toggle_frame, bg=COLORS['bg_panel'])
-        toggle_inner.pack(fill='x', padx=15, pady=10)
+        toggle_inner.pack(fill='x', padx=10, pady=5)
         
         for text, var in [
             ("Running Count", self.show_running_count),
@@ -270,28 +275,28 @@ class BlackjackGame:
             ("Discard Tray", self.show_discard_tray)
         ]:
             cb = tk.Checkbutton(toggle_inner, text=text, variable=var,
-                               font=('Trebuchet MS', 9), bg=COLORS['bg_panel'],
+                               font=('Trebuchet MS', 8), bg=COLORS['bg_panel'],
                                fg=COLORS['text_secondary'], selectcolor=COLORS['bg_elevated'],
                                activebackground=COLORS['bg_panel'],
                                activeforeground=COLORS['text_primary'],
                                command=self._update_counting_visibility)
-            cb.pack(anchor='w', pady=1)
+            cb.pack(anchor='w', pady=0)
             
     def _create_stat_card(self, parent, title, value, color):
         """Create a styled stat display card"""
         frame = tk.Frame(parent, bg=COLORS['bg_elevated'])
-        frame.pack(fill='x', padx=15, pady=8)
+        frame.pack(fill='x', padx=10, pady=4)
         
         inner = tk.Frame(frame, bg=COLORS['bg_elevated'])
-        inner.pack(fill='x', padx=15, pady=15)
+        inner.pack(fill='x', padx=10, pady=8)
         
-        tk.Label(inner, text=title, font=('Trebuchet MS', 9),
+        tk.Label(inner, text=title, font=('Trebuchet MS', 8),
                 bg=COLORS['bg_elevated'], fg=COLORS['text_muted']).pack()
         
         value_label = tk.Label(inner, text=value,
-                              font=('Consolas', 36, 'bold'),
+                              font=('Consolas', 24, 'bold'),
                               bg=COLORS['bg_elevated'], fg=color)
-        value_label.pack(pady=(5, 0))
+        value_label.pack(pady=(2, 0))
         
         # Store reference for updates
         if 'RUNNING' in title:
@@ -305,53 +310,53 @@ class BlackjackGame:
         """Setup the game table layout"""
         # Top-left: Visual Discard Pile and Deck
         top_section = tk.Frame(self.table_inner, bg=COLORS['bg_card_table'])
-        top_section.pack(fill='x', padx=20, pady=(15, 0))
+        top_section.pack(fill='x', padx=15, pady=(5, 0))
         
         # Discard pile on the left
         self.visual_discard_frame = tk.Frame(top_section, bg=COLORS['bg_card_table'])
-        self.visual_discard_frame.pack(side='left', padx=10)
+        self.visual_discard_frame.pack(side='left', padx=5)
         self._update_visual_discard_pile()
         
         # Deck visual (where cards deal from)
         self.deck_visual_frame = tk.Frame(top_section, bg=COLORS['bg_card_table'])
-        self.deck_visual_frame.pack(side='left', padx=20)
+        self.deck_visual_frame.pack(side='left', padx=15)
         self._create_deck_visual()
         
         # Dealer section
         dealer_section = tk.Frame(self.table_inner, bg=COLORS['bg_card_table'])
-        dealer_section.pack(fill='x', pady=(20, 10))
+        dealer_section.pack(fill='x', pady=(8, 5))
         
         dealer_header = tk.Frame(dealer_section, bg=COLORS['bg_card_table'])
         dealer_header.pack()
         
-        tk.Label(dealer_header, text="━━━━━", font=('Arial', 14),
+        tk.Label(dealer_header, text="━━━", font=('Arial', 12),
                 bg=COLORS['bg_card_table'], fg=COLORS['gold_dim']).pack(side='left')
-        tk.Label(dealer_header, text="  DEALER  ", font=('Palatino Linotype', 16, 'bold'),
+        tk.Label(dealer_header, text=" DEALER ", font=('Palatino Linotype', 14, 'bold'),
                 bg=COLORS['bg_card_table'], fg=COLORS['gold']).pack(side='left')
-        tk.Label(dealer_header, text="━━━━━", font=('Arial', 14),
+        tk.Label(dealer_header, text="━━━", font=('Arial', 12),
                 bg=COLORS['bg_card_table'], fg=COLORS['gold_dim']).pack(side='left')
         
         # Dealer cards container with fixed background
         self.dealer_cards_container = tk.Frame(dealer_section, bg=COLORS['bg_card_table'])
-        self.dealer_cards_container.pack(pady=15)
+        self.dealer_cards_container.pack(pady=8)
         
         self.dealer_cards_frame = tk.Frame(self.dealer_cards_container, bg=COLORS['bg_card_table'])
         self.dealer_cards_frame.pack()
         
         self.dealer_score_label = tk.Label(dealer_section, text="",
-                                          font=('Trebuchet MS', 13),
+                                          font=('Trebuchet MS', 11),
                                           bg=COLORS['bg_card_table'], fg=COLORS['text_primary'])
         self.dealer_score_label.pack()
         
         # Divider
         divider_frame = tk.Frame(self.table_inner, bg=COLORS['bg_card_table'])
-        divider_frame.pack(fill='x', pady=20)
+        divider_frame.pack(fill='x', pady=8)
         
         tk.Frame(divider_frame, bg=COLORS['emerald_dark'], height=2).pack(fill='x', padx=50)
         
         # Players section
         self.players_container = tk.Frame(self.table_inner, bg=COLORS['bg_card_table'])
-        self.players_container.pack(fill='both', expand=True, pady=10)
+        self.players_container.pack(fill='both', expand=True, pady=5)
         
         self.player_frames = []
         
@@ -408,19 +413,19 @@ class BlackjackGame:
         
     def _setup_controls(self):
         """Setup control buttons"""
-        controls_container = tk.Frame(self.main_container, bg=COLORS['bg_secondary'], height=140)
+        controls_container = tk.Frame(self.main_container, bg=COLORS['bg_secondary'], height=115)
         controls_container.pack(fill='x')
         controls_container.pack_propagate(False)
         
         # Timer bar (hidden initially)
         self.timer_frame = tk.Frame(controls_container, bg=COLORS['bg_secondary'])
-        self.timer_frame.pack(fill='x', padx=30, pady=(10, 0))
+        self.timer_frame.pack(fill='x', padx=30, pady=(5, 0))
         
         self.timer_bar = ttk.Progressbar(self.timer_frame, length=500, mode='determinate',
                                         style="Gold.Horizontal.TProgressbar")
         self.timer_bar.pack(side='left', padx=(0, 15))
         
-        self.timer_label = tk.Label(self.timer_frame, text="", font=('Consolas', 14, 'bold'),
+        self.timer_label = tk.Label(self.timer_frame, text="", font=('Consolas', 12, 'bold'),
                                    bg=COLORS['bg_secondary'], fg=COLORS['gold'])
         self.timer_label.pack(side='left')
         
@@ -441,12 +446,12 @@ class BlackjackGame:
         
         for i, (text, color, command, icon) in enumerate(action_configs):
             btn_frame = tk.Frame(buttons_frame, bg=COLORS['bg_secondary'])
-            btn_frame.grid(row=0, column=i, padx=8, pady=10)
+            btn_frame.grid(row=0, column=i, padx=6, pady=5)
             
             btn = tk.Button(btn_frame, text=f"{icon}\n{text}",
-                           font=('Trebuchet MS', 11, 'bold'),
+                           font=('Trebuchet MS', 10, 'bold'),
                            bg=color, fg='white',
-                           width=10, height=3,
+                           width=9, height=2,
                            relief='flat', cursor='hand2',
                            activebackground=lighten_color(color),
                            command=command)
@@ -457,50 +462,50 @@ class BlackjackGame:
         
         # Separator
         tk.Frame(buttons_frame, bg=COLORS['text_muted'], width=2).grid(
-            row=0, column=3, padx=15, sticky='ns', pady=15)
+            row=0, column=3, padx=10, sticky='ns', pady=10)
         
         # DEAL button
         deal_frame = tk.Frame(buttons_frame, bg=COLORS['bg_secondary'])
-        deal_frame.grid(row=0, column=4, padx=8, pady=10)
+        deal_frame.grid(row=0, column=4, padx=6, pady=5)
         
         self.deal_button = tk.Button(deal_frame, text="🃏\nDEAL",
-                                    font=('Trebuchet MS', 11, 'bold'),
+                                    font=('Trebuchet MS', 10, 'bold'),
                                     bg=COLORS['btn_deal'], fg='white',
-                                    width=10, height=3,
+                                    width=9, height=2,
                                     relief='flat', cursor='hand2',
                                     activebackground=lighten_color(COLORS['btn_deal']),
                                     command=self._deal_new_hand)
         self.deal_button.pack()
         add_hover_effect(self.deal_button, COLORS['btn_deal'], lighten_color(COLORS['btn_deal']))
         
-        tk.Label(deal_frame, text="Same Deck", font=('Trebuchet MS', 8),
+        tk.Label(deal_frame, text="Same Deck", font=('Trebuchet MS', 7),
                 bg=COLORS['bg_secondary'], fg=COLORS['text_muted']).pack()
         
         # NEW GAME button
         new_game_frame = tk.Frame(buttons_frame, bg=COLORS['bg_secondary'])
-        new_game_frame.grid(row=0, column=5, padx=8, pady=10)
+        new_game_frame.grid(row=0, column=5, padx=6, pady=5)
         
-        self.new_game_button = tk.Button(new_game_frame, text="🔄\nNEW GAME",
-                                        font=('Trebuchet MS', 11, 'bold'),
+        self.new_game_button = tk.Button(new_game_frame, text="🔄\nNEW",
+                                        font=('Trebuchet MS', 10, 'bold'),
                                         bg=COLORS['btn_new_game'], fg='white',
-                                        width=10, height=3,
+                                        width=9, height=2,
                                         relief='flat', cursor='hand2',
                                         activebackground=lighten_color(COLORS['btn_new_game']),
                                         command=self._start_new_game)
         self.new_game_button.pack()
         add_hover_effect(self.new_game_button, COLORS['btn_new_game'], lighten_color(COLORS['btn_new_game']))
         
-        tk.Label(new_game_frame, text="Fresh Deck", font=('Trebuchet MS', 8),
+        tk.Label(new_game_frame, text="Fresh Deck", font=('Trebuchet MS', 7),
                 bg=COLORS['bg_secondary'], fg=COLORS['text_muted']).pack()
         
         # PAUSE button
         pause_frame = tk.Frame(buttons_frame, bg=COLORS['bg_secondary'])
-        pause_frame.grid(row=0, column=6, padx=8, pady=10)
+        pause_frame.grid(row=0, column=6, padx=6, pady=5)
         
         self.pause_button = tk.Button(pause_frame, text="⏸\nPAUSE",
-                                     font=('Trebuchet MS', 11, 'bold'),
+                                     font=('Trebuchet MS', 10, 'bold'),
                                      bg=COLORS['bg_elevated'], fg='white',
-                                     width=10, height=3,
+                                     width=9, height=2,
                                      relief='flat', cursor='hand2',
                                      activebackground=lighten_color(COLORS['bg_elevated']),
                                      command=self._toggle_pause)
@@ -515,9 +520,9 @@ class BlackjackGame:
         # Status label
         self.status_label = tk.Label(controls_container, 
                                     text="♠ ♥ Welcome to the Private Club ♦ ♣",
-                                    font=('Palatino Linotype', 14),
+                                    font=('Palatino Linotype', 11),
                                     bg=COLORS['bg_secondary'], fg=COLORS['gold'])
-        self.status_label.pack(pady=(0, 15))
+        self.status_label.pack(pady=(0, 8))
         
     # ═══════════════════════════════════════════════════════════════
     # SETTINGS DIALOG
@@ -613,6 +618,22 @@ class BlackjackGame:
                   width=5, font=('Consolas', 11), bg=COLORS['bg_elevated'],
                   fg=COLORS['text_primary']).pack(side='right', padx=5)
         
+        # Display settings header
+        tk.Label(content, text="DISPLAY OPTIONS",
+                font=('Trebuchet MS', 11, 'bold'),
+                bg=COLORS['bg_primary'], fg=COLORS['gold']).pack(fill='x', pady=(20, 10), anchor='w')
+        
+        # Hi-Lo on cards toggle
+        hilo_cards_frame = tk.Frame(content, bg=COLORS['bg_primary'])
+        hilo_cards_frame.pack(fill='x', pady=5)
+        
+        tk.Checkbutton(hilo_cards_frame, text="Show Hi-Lo Values on Cards", 
+                      variable=self.show_hilo_on_cards,
+                      font=('Trebuchet MS', 11), bg=COLORS['bg_primary'],
+                      fg=COLORS['text_primary'], selectcolor=COLORS['bg_elevated'],
+                      activebackground=COLORS['bg_primary'],
+                      command=self._update_display).pack(side='left')
+        
         # Apply button
         apply_btn = tk.Button(self.settings_window, text="✓  APPLY & START NEW GAME",
                              font=('Trebuchet MS', 13, 'bold'),
@@ -670,35 +691,37 @@ class BlackjackGame:
             self.show_true_count.set(True)
             self.show_hilo_chart.set(True)
             self.show_discard_tray.set(True)
+            self.show_hilo_on_cards.set(True)
         else:
             self.mode_btn.config(text="📝 TEST MODE", bg=COLORS['danger'])
             self.show_running_count.set(False)
             self.show_true_count.set(False)
             self.show_hilo_chart.set(False)
             self.show_discard_tray.set(False)
+            self.show_hilo_on_cards.set(False)
         self._update_counting_visibility()
+        self._update_display()
         
     def _update_counting_visibility(self):
-        """Update visibility of counting aids"""
+        """Update visibility of counting aids - always maintain fixed order"""
+        # First, unpack all items to reset their order
+        self.running_count_frame.pack_forget()
+        self.true_count_frame.pack_forget()
+        self.hilo_frame.pack_forget()
+        self.discard_frame.pack_forget()
+        
+        # Then pack them back in the correct fixed order (only if visible)
         if self.show_running_count.get():
-            self.running_count_frame.pack(fill='x', padx=15, pady=8)
-        else:
-            self.running_count_frame.pack_forget()
+            self.running_count_frame.pack(fill='x', padx=10, pady=4)
             
         if self.show_true_count.get():
-            self.true_count_frame.pack(fill='x', padx=15, pady=8)
-        else:
-            self.true_count_frame.pack_forget()
+            self.true_count_frame.pack(fill='x', padx=10, pady=4)
             
         if self.show_hilo_chart.get():
-            self.hilo_frame.pack(fill='x', padx=15, pady=8)
-        else:
-            self.hilo_frame.pack_forget()
+            self.hilo_frame.pack(fill='x', padx=10, pady=4)
             
         if self.show_discard_tray.get():
-            self.discard_frame.pack(fill='both', expand=True, padx=15, pady=8)
-        else:
-            self.discard_frame.pack_forget()
+            self.discard_frame.pack(fill='both', expand=True, padx=10, pady=4)
             
     # ═══════════════════════════════════════════════════════════════
     # CARD MANAGEMENT
@@ -827,37 +850,37 @@ class BlackjackGame:
             # Outer frame for glow effect
             glow_frame = tk.Frame(self.players_container, bg=COLORS['player_frame_normal'], 
                                  relief='flat', bd=0)
-            glow_frame.pack(side='left', fill='both', expand=True, padx=8, pady=10)
+            glow_frame.pack(side='left', fill='both', expand=True, padx=5, pady=5)
             
             # Main player frame
             frame = tk.Frame(glow_frame, bg=COLORS['player_frame_normal'], relief='flat')
-            frame.pack(fill='both', expand=True, padx=3, pady=3)
+            frame.pack(fill='both', expand=True, padx=2, pady=2)
             
             inner_frame = tk.Frame(frame, bg=COLORS['player_frame_inner'])
             inner_frame.pack(fill='both', expand=True, padx=2, pady=2)
             
             type_icon = "🤖" if player.player_type == PlayerType.AI else "👤"
-            header = tk.Label(inner_frame, text=f"{type_icon}  {player.name}",
-                            font=('Trebuchet MS', 12, 'bold'),
+            header = tk.Label(inner_frame, text=f"{type_icon} {player.name}",
+                            font=('Trebuchet MS', 11, 'bold'),
                             bg=COLORS['player_frame_inner'], fg=COLORS['gold'])
-            header.pack(pady=(10, 0))
+            header.pack(pady=(5, 0))
             
             # Cards frame with FIXED background (isolated from state changes)
             cards_outer = tk.Frame(inner_frame, bg=COLORS['bg_card_table'])
-            cards_outer.pack(pady=15, fill='x', padx=10)
+            cards_outer.pack(pady=8, fill='x', padx=5)
             
             cards_frame = tk.Frame(cards_outer, bg=COLORS['bg_card_table'])
             cards_frame.pack(expand=True)
             
             score_label = tk.Label(inner_frame, text="Score: 0",
-                                  font=('Trebuchet MS', 12),
+                                  font=('Trebuchet MS', 11),
                                   bg=COLORS['player_frame_inner'], fg=COLORS['text_primary'])
             score_label.pack()
             
             status_label = tk.Label(inner_frame, text="",
-                                   font=('Trebuchet MS', 10, 'italic'),
+                                   font=('Trebuchet MS', 9, 'italic'),
                                    bg=COLORS['player_frame_inner'], fg=COLORS['text_muted'])
-            status_label.pack(pady=(0, 10))
+            status_label.pack(pady=(0, 5))
             
             self.player_frames.append({
                 'glow_frame': glow_frame,
@@ -880,6 +903,7 @@ class BlackjackGame:
         for i, card in enumerate(self.dealer_hand):
             hidden = (i == 0 and not self.game_over)
             card_widget = create_card_widget(self.dealer_cards_frame, card, hidden=hidden,
+                                            show_hilo=self.show_hilo_on_cards.get(),
                                             training_mode=self.training_mode.get())
             card_widget.pack(side='left', padx=4)
             
@@ -906,6 +930,7 @@ class BlackjackGame:
             
             for card in player.hand:
                 card_widget = create_card_widget(card_container, card,
+                                                show_hilo=self.show_hilo_on_cards.get(),
                                                 training_mode=self.training_mode.get())
                 card_widget.pack(side='left', padx=3)
                 
