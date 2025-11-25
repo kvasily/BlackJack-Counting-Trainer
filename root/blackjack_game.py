@@ -356,24 +356,32 @@ class BlackjackGame:
         self.player_frames = []
         
     def _create_deck_visual(self):
-        """Create the visual deck representation"""
+        """Create the visual deck representation using actual card back widgets"""
         for widget in self.deck_visual_frame.winfo_children():
             widget.destroy()
-            
-        # Create stacked deck visual
-        deck_canvas = tk.Canvas(
-            self.deck_visual_frame,
-            width=CARD_WIDTH + 15,
-            height=CARD_HEIGHT + 10,
-            bg=COLORS['bg_card_table'],
-            highlightthickness=0
-        )
-        deck_canvas.pack()
         
-        # Draw multiple card backs to show stack
-        for i in range(min(5, max(1, len(self.deck) // 10))):
-            offset = i * 2
-            self._draw_mini_card_back_on_canvas(deck_canvas, 2 + offset, 2 + offset)
+        # Container for stacked cards
+        stack_container = tk.Frame(self.deck_visual_frame, bg=COLORS['bg_card_table'])
+        stack_container.pack()
+        
+        # Calculate how many card backs to show based on deck size
+        num_visible = min(5, max(1, len(self.deck) // 10))
+        
+        # Create a canvas to hold the stacked card backs
+        stack_offset = 2
+        total_width = CARD_WIDTH + (num_visible - 1) * stack_offset + 4
+        total_height = CARD_HEIGHT + (num_visible - 1) * stack_offset + 4
+        
+        # Use a frame to stack actual card back canvases
+        for i in range(num_visible):
+            # Create actual card back using the same function as dealer cards
+            card_back = create_card_back_canvas(stack_container)
+            # Position with offset using place for stacking effect
+            card_back.place(x=i * stack_offset, y=i * stack_offset)
+        
+        # Set container size
+        stack_container.config(width=total_width, height=total_height)
+        stack_container.pack_propagate(False)
         
         # Deck label
         tk.Label(
@@ -386,25 +394,6 @@ class BlackjackGame:
         
         # Store deck position for animations
         self.deck_visual_frame.update_idletasks()
-        
-    def _draw_mini_card_back_on_canvas(self, canvas, x, y):
-        """Draw a card back on a canvas at specified position"""
-        from ui_components import create_rounded_rect, darken_color
-        
-        w, h = CARD_WIDTH - 12, CARD_HEIGHT - 12
-        
-        # Shadow
-        create_rounded_rect(canvas, x + 2, y + 2, x + w + 2, y + h + 2, 4,
-                           fill='#1a1512', outline='')
-        
-        # Card back
-        create_rounded_rect(canvas, x, y, x + w, y + h, 4,
-                           fill=COLORS['card_back'],
-                           outline=darken_color(COLORS['card_back'], 0.7), width=1)
-        
-        # Inner border
-        create_rounded_rect(canvas, x + 3, y + 3, x + w - 3, y + h - 3, 3,
-                           fill='', outline=COLORS['card_back_pattern'], width=1)
         
     def _update_visual_discard_pile(self):
         """Update the visual discard pile display"""

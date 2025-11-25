@@ -205,17 +205,21 @@ def create_card_front_canvas(parent, card, show_hilo=True, training_mode=True,
         highlightthickness=0
     )
     
-    # Card dimensions (with padding for shadow)
-    card_x = 2
-    card_y = 2
-    card_w = width - 6
-    card_h = height - 6
+    # Card bounds - leave room for shadow
+    padding = 3
+    shadow_offset = 2
+    card_left = padding
+    card_top = padding
+    card_right = width - padding - shadow_offset
+    card_bottom = height - padding - shadow_offset
+    card_w = card_right - card_left
+    card_h = card_bottom - card_top
     
     # Card shadow
     create_rounded_rect(
         canvas, 
-        card_x + 2, card_y + 2, 
-        card_x + card_w + 2, card_y + card_h + 2,
+        card_left + shadow_offset, card_top + shadow_offset, 
+        card_right + shadow_offset, card_bottom + shadow_offset,
         CARD_CORNER_RADIUS,
         fill='#1a1512', outline=''
     )
@@ -223,98 +227,100 @@ def create_card_front_canvas(parent, card, show_hilo=True, training_mode=True,
     # Main card background - warm off-white
     create_rounded_rect(
         canvas, 
-        card_x, card_y, card_x + card_w, card_y + card_h,
+        card_left, card_top, card_right, card_bottom,
         CARD_CORNER_RADIUS,
         fill=COLORS['card_face'], outline=COLORS['card_border'], width=1
     )
     
     # Subtle inner border for elegance
-    inner_margin = 3
+    border_inset = 3
     create_rounded_rect(
         canvas,
-        card_x + inner_margin, card_y + inner_margin, 
-        card_x + card_w - inner_margin, card_y + card_h - inner_margin,
+        card_left + border_inset, card_top + border_inset, 
+        card_right - border_inset, card_bottom - border_inset,
         CARD_CORNER_RADIUS - 1,
-        fill='', outline='#e8e4dc', width=1
+        fill='', outline='#e5e0d8', width=1
     )
     
-    # Calculate positions relative to card bounds
-    center_x = card_x + card_w // 2
-    center_y = card_y + card_h // 2
+    # Calculate center position
+    center_x = card_left + card_w // 2
+    center_y = card_top + card_h // 2
     
-    # Rank display for top-left corner
-    rank_display = rank if rank != '10' else '10'
-    rank_font_size = 10 if rank == '10' else 12
+    # Corner text positioning - keep well inside card edges
+    corner_inset = 6
     
-    # Top-left rank and suit (well within card)
+    # Rank display
+    rank_display = rank
+    rank_font_size = 9 if rank == '10' else 10
+    suit_font_size = 8
+    
+    # Top-left rank and suit
     canvas.create_text(
-        card_x + 8, card_y + 8,
+        card_left + corner_inset, card_top + corner_inset,
         text=rank_display,
         font=('Georgia', rank_font_size, 'bold'),
         fill=suit_color,
         anchor='nw'
     )
     canvas.create_text(
-        card_x + 10, card_y + 22,
+        card_left + corner_inset + 1, card_top + corner_inset + 13,
         text=suit_symbol,
-        font=('Arial', 9),
+        font=('Arial', suit_font_size),
         fill=suit_color,
         anchor='nw'
     )
     
-    # Bottom-right rank and suit (inverted, well within card)
+    # Bottom-right rank and suit (no rotation - just position at bottom right)
     canvas.create_text(
-        card_x + card_w - 8, card_y + card_h - 8,
+        card_right - corner_inset, card_bottom - corner_inset - 13,
+        text=suit_symbol,
+        font=('Arial', suit_font_size),
+        fill=suit_color,
+        anchor='se'
+    )
+    canvas.create_text(
+        card_right - corner_inset - 1, card_bottom - corner_inset,
         text=rank_display,
         font=('Georgia', rank_font_size, 'bold'),
         fill=suit_color,
-        anchor='se',
-        angle=180
-    )
-    canvas.create_text(
-        card_x + card_w - 10, card_y + card_h - 22,
-        text=suit_symbol,
-        font=('Arial', 9),
-        fill=suit_color,
-        anchor='se',
-        angle=180
+        anchor='se'
     )
     
-    # Large center suit symbol (adjusted for card bounds)
-    center_y_offset = -3 if show_hilo and training_mode else 0
+    # Center content - adjust position if hi-lo badge is shown
+    center_y_adjust = -5 if (show_hilo and training_mode) else 0
     
-    # For face cards, add a stylized letter
+    # Center suit/face symbol - use smaller fonts to fit
     if rank in ['J', 'Q', 'K']:
-        # Draw face card indicator
+        # Face card - letter and suit
         canvas.create_text(
-            center_x, center_y - 6 + center_y_offset,
+            center_x, center_y - 5 + center_y_adjust,
             text=rank,
-            font=('Georgia', 18, 'bold italic'),
+            font=('Georgia', 14, 'bold'),
             fill=suit_color,
             anchor='center'
         )
         canvas.create_text(
-            center_x, center_y + 12 + center_y_offset,
+            center_x, center_y + 10 + center_y_adjust,
             text=suit_symbol,
-            font=('Arial', 14),
+            font=('Arial', 12),
             fill=suit_color,
             anchor='center'
         )
     elif rank == 'A':
-        # Ace gets a larger suit symbol
+        # Ace - larger suit
         canvas.create_text(
-            center_x, center_y + center_y_offset,
+            center_x, center_y + center_y_adjust,
             text=suit_symbol,
-            font=('Arial', 28),
+            font=('Arial', 22),
             fill=suit_color,
             anchor='center'
         )
     else:
-        # Number cards - center suit
+        # Number card - medium suit
         canvas.create_text(
-            center_x, center_y + center_y_offset,
+            center_x, center_y + center_y_adjust,
             text=suit_symbol,
-            font=('Arial', 22),
+            font=('Arial', 18),
             fill=suit_color,
             anchor='center'
         )
@@ -325,24 +331,33 @@ def create_card_front_canvas(parent, card, show_hilo=True, training_mode=True,
         if hilo > 0:
             hilo_color = COLORS['success']
             hilo_text = f"+{hilo}"
+            badge_bg = '#1a3d2a'  # Dark green background
         elif hilo < 0:
             hilo_color = COLORS['danger']
             hilo_text = str(hilo)
+            badge_bg = '#3d1a1a'  # Dark red background
         else:
-            hilo_color = COLORS['text_muted']
+            hilo_color = COLORS['warning']
             hilo_text = "0"
+            badge_bg = '#3d3d1a'  # Dark yellow background
         
-        # Draw Hi-Lo badge at bottom center (within card bounds)
-        badge_y = card_y + card_h - 12
-        canvas.create_oval(
-            center_x - 9, badge_y - 7,
-            center_x + 9, badge_y + 7,
-            fill=COLORS['bg_elevated'], outline=hilo_color, width=1
+        # Hi-Lo badge - larger and positioned below center content
+        badge_y = card_bottom - 16
+        badge_width = 22
+        badge_height = 14
+        
+        # Rounded rectangle badge
+        create_rounded_rect(
+            canvas,
+            center_x - badge_width // 2, badge_y - badge_height // 2,
+            center_x + badge_width // 2, badge_y + badge_height // 2,
+            4,
+            fill=badge_bg, outline=hilo_color, width=1
         )
         canvas.create_text(
             center_x, badge_y,
             text=hilo_text,
-            font=('Consolas', 8, 'bold'),
+            font=('Consolas', 10, 'bold'),
             fill=hilo_color,
             anchor='center'
         )
