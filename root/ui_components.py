@@ -593,7 +593,7 @@ def create_mini_card_back(parent, width=30, height=42):
 
 def create_discard_pile_widget(parent, card_count=0, max_visible=5):
     """
-    Create a stacked discard pile visual with count badge.
+    Create a stacked discard pile visual with count badge (same size as deck).
     
     Args:
         parent: Parent widget
@@ -605,84 +605,60 @@ def create_discard_pile_widget(parent, card_count=0, max_visible=5):
     """
     frame = tk.Frame(parent, bg=COLORS['bg_card_table'])
     
-    # Container for stacked cards
-    stack_frame = tk.Frame(frame, bg=COLORS['bg_card_table'])
-    stack_frame.pack(pady=5)
+    # Container for stacked cards - same size as deck
+    stack_container = tk.Frame(frame, bg=COLORS['bg_card_table'])
+    stack_container.pack()
     
-    # Mini card dimensions
-    mini_w = 28
-    mini_h = 40
+    # Calculate how many card backs to show based on discard count
+    num_visible = min(max_visible, max(1, card_count // 10)) if card_count > 0 else 0
     
-    # Calculate how many card backs to show
-    visible_cards = min(card_count, max_visible) if card_count > 0 else 0
+    # Stack offset same as deck - use consistent max size for alignment
+    stack_offset = 2
+    # Always use max_visible for consistent container size (matches deck)
+    total_width = CARD_WIDTH + (max_visible - 1) * stack_offset + 4
+    total_height = CARD_HEIGHT + (max_visible - 1) * stack_offset + 4
     
-    if visible_cards == 0:
-        # Show empty placeholder
+    if num_visible == 0:
+        # Show empty placeholder with dashed outline (same size as a card)
         placeholder = tk.Canvas(
-            stack_frame,
-            width=mini_w + 6,
-            height=mini_h + 6,
+            stack_container,
+            width=CARD_WIDTH,
+            height=CARD_HEIGHT,
             bg=COLORS['bg_card_table'],
             highlightthickness=0
         )
         create_rounded_rect(
             placeholder,
-            2, 2, mini_w + 2, mini_h + 2,
-            3,
-            fill='', outline=COLORS['text_muted'], width=1, dash=(3, 3)
+            3, 3, CARD_WIDTH - 3, CARD_HEIGHT - 3,
+            CARD_CORNER_RADIUS,
+            fill='', outline=COLORS['text_muted'], width=1, dash=(4, 4)
         )
-        placeholder.pack()
+        # Position placeholder at bottom-right to match stacked card position
+        placeholder.place(x=(max_visible - 1) * stack_offset, y=(max_visible - 1) * stack_offset)
     else:
-        # Create stacked card backs with offset
-        stack_offset = 2
-        canvas_w = mini_w + 6 + (visible_cards - 1) * stack_offset
-        canvas_h = mini_h + 6 + (visible_cards - 1) * stack_offset
-        
-        stack_canvas = tk.Canvas(
-            stack_frame,
-            width=canvas_w,
-            height=canvas_h,
-            bg=COLORS['bg_card_table'],
-            highlightthickness=0
-        )
-        stack_canvas.pack()
-        
-        for i in range(visible_cards):
-            offset_x = i * stack_offset
-            offset_y = i * stack_offset
-            
-            # Card shadow
-            create_rounded_rect(
-                stack_canvas,
-                offset_x + 3, offset_y + 3,
-                offset_x + mini_w + 3, offset_y + mini_h + 3,
-                3,
-                fill='#1a1512', outline=''
-            )
-            
-            # Card back
-            create_rounded_rect(
-                stack_canvas,
-                offset_x + 1, offset_y + 1,
-                offset_x + mini_w + 1, offset_y + mini_h + 1,
-                3,
-                fill=COLORS['card_back'], 
-                outline=darken_color(COLORS['card_back'], 0.7), 
-                width=1
-            )
-            
-            # Inner border
-            create_rounded_rect(
-                stack_canvas,
-                offset_x + 4, offset_y + 4,
-                offset_x + mini_w - 2, offset_y + mini_h - 2,
-                2,
-                fill='', outline=COLORS['card_back_pattern'], width=1
-            )
+        # Use actual card back canvases (same as deck visual)
+        for i in range(num_visible):
+            card_back = create_card_back_canvas(stack_container)
+            # Offset from end position to match deck visual alignment
+            offset_start = (max_visible - num_visible) * stack_offset
+            card_back.place(x=offset_start + i * stack_offset, y=offset_start + i * stack_offset)
     
-    # Count badge
+    # Set container size - always same size for consistent alignment
+    stack_container.config(width=total_width, height=total_height)
+    stack_container.pack_propagate(False)
+    
+    # Label
+    tk.Label(
+        frame,
+        text="DISCARDED",
+        font=('Trebuchet MS', 8),
+        bg=COLORS['bg_card_table'],
+        fg=COLORS['text_muted']
+    ).pack(pady=(3, 0))
+    
+    # Count badge (below the label)
     badge_frame = tk.Frame(frame, bg=COLORS['bg_elevated'], padx=8, pady=2)
-    badge_frame.pack(pady=(5, 0))
+    badge_frame.pack(pady=(2, 0))
     
     count_label = tk.Label(
         badge_frame,
@@ -692,15 +668,6 @@ def create_discard_pile_widget(parent, card_count=0, max_visible=5):
         fg=COLORS['text_primary']
     )
     count_label.pack()
-    
-    # Label
-    tk.Label(
-        frame,
-        text="DISCARDED",
-        font=('Trebuchet MS', 7),
-        bg=COLORS['bg_card_table'],
-        fg=COLORS['text_muted']
-    ).pack(pady=(2, 0))
     
     return frame
 

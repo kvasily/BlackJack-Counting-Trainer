@@ -66,6 +66,7 @@ DEFAULT_NUM_PLAYERS = 1
 DEFAULT_TIMER_DURATION = 15
 DEFAULT_AUTO_DEAL_DELAY = 3
 DEFAULT_AI_SKILL = 50
+DEFAULT_DEALING_SPEED = 50  # 0-100, where 50 is normal speed (1.0x)
 
 # Reshuffle when deck reaches this penetration
 RESHUFFLE_PENETRATION = 0.25

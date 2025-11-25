@@ -9,7 +9,7 @@ from typing import List, Optional, Tuple
 from config import (
     COLORS, RANKS, DEFAULT_NUM_DECKS, DEFAULT_NUM_PLAYERS,
     DEFAULT_TIMER_DURATION, DEFAULT_AUTO_DEAL_DELAY, DEFAULT_AI_SKILL,
-    RESHUFFLE_PENETRATION, HILO_VALUES, CARD_WIDTH, CARD_HEIGHT,
+    DEFAULT_DEALING_SPEED, RESHUFFLE_PENETRATION, HILO_VALUES, CARD_WIDTH, CARD_HEIGHT,
     ANIMATION_CARD_DEAL, ANIMATION_CARD_EFFECT, ANIMATION_FLIP_STEP,
     ANIMATION_AI_THINK, ANIMATION_AI_RESULT, ANIMATION_DEALER_DRAW,
     ANIMATION_PLAYER_ACTION, ANIMATION_NEXT_PLAYER,
@@ -45,6 +45,7 @@ class BlackjackGame:
         self.auto_deal_enabled = tk.BooleanVar(value=False)
         self.auto_deal_delay = tk.IntVar(value=DEFAULT_AUTO_DEAL_DELAY)
         self.ai_skill = tk.IntVar(value=DEFAULT_AI_SKILL)
+        self.dealing_speed = tk.IntVar(value=DEFAULT_DEALING_SPEED)
         
         # Visibility toggles
         self.show_running_count = tk.BooleanVar(value=True)
@@ -256,7 +257,7 @@ class BlackjackGame:
         
         self.discard_text = tk.Text(self.discard_frame, font=('Consolas', 8),
                                    bg=COLORS['bg_panel'], fg=COLORS['text_secondary'],
-                                   height=12, width=25, relief='flat', 
+                                   height=16, width=25, relief='flat', 
                                    state='disabled', padx=6, pady=6,
                                    selectbackground=COLORS['gold_dim'])
         self.discard_text.pack(padx=8, pady=(0, 6))
@@ -308,23 +309,23 @@ class BlackjackGame:
         
     def _setup_game_table(self):
         """Setup the game table layout"""
-        # Top-left: Visual Discard Pile and Deck
+        # Top section: Discard Pile on left
         top_section = tk.Frame(self.table_inner, bg=COLORS['bg_card_table'])
         top_section.pack(fill='x', padx=15, pady=(5, 0))
         
-        # Discard pile on the left
+        # Discard pile in top left corner
         self.visual_discard_frame = tk.Frame(top_section, bg=COLORS['bg_card_table'])
-        self.visual_discard_frame.pack(side='left', padx=5)
+        self.visual_discard_frame.pack(side='left', padx=5, anchor='nw')
         self._update_visual_discard_pile()
-        
-        # Deck visual (where cards deal from)
-        self.deck_visual_frame = tk.Frame(top_section, bg=COLORS['bg_card_table'])
-        self.deck_visual_frame.pack(side='left', padx=15)
-        self._create_deck_visual()
         
         # Dealer section
         dealer_section = tk.Frame(self.table_inner, bg=COLORS['bg_card_table'])
         dealer_section.pack(fill='x', pady=(8, 5))
+        
+        # Deck visual - initially positioned above dealer header, will move to top middle when dealing starts
+        self.deck_visual_frame = tk.Frame(self.table_inner, bg=COLORS['bg_card_table'])
+        self.deck_visual_frame.pack(pady=(0, 8))
+        self._create_deck_visual()
         
         dealer_header = tk.Frame(dealer_section, bg=COLORS['bg_card_table'])
         dealer_header.pack()
@@ -370,21 +371,23 @@ class BlackjackGame:
         stack_container.pack()
         
         # Calculate how many card backs to show based on deck size
-        num_visible = min(5, max(1, len(self.deck) // 10))
+        max_visible = 5
+        num_visible = min(max_visible, max(1, len(self.deck) // 10))
         
-        # Create a canvas to hold the stacked card backs
+        # Use consistent container size for alignment (always max_visible)
         stack_offset = 2
-        total_width = CARD_WIDTH + (num_visible - 1) * stack_offset + 4
-        total_height = CARD_HEIGHT + (num_visible - 1) * stack_offset + 4
+        total_width = CARD_WIDTH + (max_visible - 1) * stack_offset + 4
+        total_height = CARD_HEIGHT + (max_visible - 1) * stack_offset + 4
         
         # Use a frame to stack actual card back canvases
         for i in range(num_visible):
             # Create actual card back using the same function as dealer cards
             card_back = create_card_back_canvas(stack_container)
-            # Position with offset using place for stacking effect
-            card_back.place(x=i * stack_offset, y=i * stack_offset)
+            # Offset from end position so cards align at bottom-right
+            offset_start = (max_visible - num_visible) * stack_offset
+            card_back.place(x=offset_start + i * stack_offset, y=offset_start + i * stack_offset)
         
-        # Set container size
+        # Set container size - always same size for consistent alignment
         stack_container.config(width=total_width, height=total_height)
         stack_container.pack_propagate(False)
         
@@ -626,6 +629,26 @@ class BlackjackGame:
                   width=5, font=('Consolas', 11), bg=COLORS['bg_elevated'],
                   fg=COLORS['text_primary']).pack(side='right', padx=5)
         
+        # Dealing Speed slider
+        speed_frame = tk.Frame(content, bg=COLORS['bg_primary'])
+        speed_frame.pack(fill='x', pady=15)
+        
+        tk.Label(speed_frame, text="Dealing Speed:", font=('Trebuchet MS', 11),
+                bg=COLORS['bg_primary'], fg=COLORS['text_primary']).pack(side='left')
+        
+        self.dealing_speed_label = tk.Label(speed_frame, text=f"{self.dealing_speed.get()}%",
+                                      font=('Consolas', 11, 'bold'),
+                                      bg=COLORS['bg_primary'], fg=COLORS['gold'])
+        self.dealing_speed_label.pack(side='right')
+        
+        speed_scale = tk.Scale(speed_frame, from_=10, to=100, orient='horizontal',
+                           variable=self.dealing_speed, bg=COLORS['bg_elevated'],
+                           fg=COLORS['text_primary'], highlightthickness=0,
+                           length=200, troughcolor=COLORS['bg_panel'],
+                           activebackground=COLORS['gold'],
+                           command=lambda v: self.dealing_speed_label.config(text=f"{int(float(v))}%"))
+        speed_scale.pack(side='right', padx=10)
+        
         # Display settings header
         tk.Label(content, text="DISPLAY OPTIONS",
                 font=('Trebuchet MS', 11, 'bold'),
@@ -735,13 +758,27 @@ class BlackjackGame:
     # CARD MANAGEMENT
     # ═══════════════════════════════════════════════════════════════
     
+    def _get_dealing_delay(self, base_delay):
+        """
+        Calculate adjusted animation delay based on dealing speed.
+        
+        Args:
+            base_delay: Base animation delay in milliseconds
+            
+        Returns:
+            Adjusted delay based on dealing speed (10-100, where 50 = 1.0x)
+        """
+        speed = self.dealing_speed.get()
+        # Speed 50 = 1.0x (normal), 100 = 2.0x (faster), 10 = 0.2x (slower)
+        speed_multiplier = speed / 50.0
+        adjusted_delay = int(base_delay / speed_multiplier)
+        return max(10, adjusted_delay)  # Minimum 10ms delay
+    
     def _discard_card(self, card, visible=True):
         """Add card to discard pile"""
         self.discarded_cards.append(card)
         if visible:
             self.visible_cards.append(card)
-        # Update visual discard pile
-        self._update_visual_discard_pile()
             
     def _reveal_dealer_hole_card(self):
         """Reveal dealer's hole card for counting"""
@@ -1050,6 +1087,10 @@ class BlackjackGame:
         self.visible_cards = []
         self.dealer_hole_card = None
         
+        # Reset deck position to initial (above dealer header)
+        self.deck_visual_frame.place_forget()
+        self.deck_visual_frame.pack(pady=(0, 8))
+        
         # Update visuals
         self._update_visual_discard_pile()
         self._create_deck_visual()
@@ -1098,6 +1139,26 @@ class BlackjackGame:
         self.game_over = False
         self.game_started = True
         
+        # Move deck near the discard pile when dealing starts - align with discard pile
+        self.deck_visual_frame.pack_forget()
+        # Get exact position of discard pile to align deck perfectly
+        self.table_inner.update_idletasks()
+        # Both deck and discard use same dimensions: CARD_WIDTH + (5-1)*2 + 4 = CARD_WIDTH + 12
+        max_visible = 5
+        stack_offset = 2
+        discard_pile_width = CARD_WIDTH + (max_visible - 1) * stack_offset + 4
+        
+        # Get discard pile position - need coordinates relative to table_inner
+        # visual_discard_frame is in top_section, which is in table_inner
+        # top_section: padx=15, pady=(5, 0)
+        # visual_discard_frame: padx=5, anchor='nw'
+        discard_x_relative = 15 + 5  # top_section padx + discard frame padx
+        discard_y_relative = 5  # top_section pady
+        
+        # Position deck right next to discard pile, aligned at same vertical level
+        deck_x = discard_x_relative + discard_pile_width + 15  # Position right next to discard pile with spacing
+        self.deck_visual_frame.place(x=deck_x, y=discard_y_relative, anchor='nw')
+        
         self._setup_player_frames()
         self._update_display()
         
@@ -1127,18 +1188,21 @@ class BlackjackGame:
         """Animate a single card being dealt with arc motion"""
         self.status_label.config(text="🎴 Dealing...", fg=COLORS['cyan'])
         self._deal_card(target_hand, visible=visible)
-        self.root.after(ANIMATION_CARD_DEAL, lambda: self._card_dealt_effect(callback))
+        delay = self._get_dealing_delay(ANIMATION_CARD_DEAL)
+        self.root.after(delay, lambda: self._card_dealt_effect(callback))
         
     def _animate_dealer_hole_card(self, callback):
         """Animate dealing dealer's hidden hole card"""
         self.status_label.config(text="🎴 Dealing...", fg=COLORS['cyan'])
         self._deal_dealer_hole_card()
-        self.root.after(ANIMATION_CARD_DEAL, lambda: self._card_dealt_effect(callback))
+        delay = self._get_dealing_delay(ANIMATION_CARD_DEAL)
+        self.root.after(delay, lambda: self._card_dealt_effect(callback))
         
     def _card_dealt_effect(self, callback):
         """Visual effect after card is dealt"""
         self._update_display()
-        self.root.after(ANIMATION_CARD_EFFECT, callback)
+        delay = self._get_dealing_delay(ANIMATION_CARD_EFFECT)
+        self.root.after(delay, callback)
         
     def _finish_dealing(self):
         """Complete dealing and start play"""
@@ -1456,7 +1520,8 @@ class BlackjackGame:
             self.status_label.config(text="🎴 Dealer draws...", fg=COLORS['cyan'])
             self._deal_card(self.dealer_hand)
             self._update_display()
-            self.root.after(ANIMATION_DEALER_DRAW, lambda: self._dealer_draw_sequence(all_busted))
+            delay = self._get_dealing_delay(ANIMATION_DEALER_DRAW)
+            self.root.after(delay, lambda: self._dealer_draw_sequence(all_busted))
         else:
             self._update_display()
             self._determine_winners()
@@ -1487,6 +1552,8 @@ class BlackjackGame:
         
         # Update display to show win/bust glow effects
         self._update_display()
+        # Update visual discard pile at end of round
+        self._update_visual_discard_pile()
         self.status_label.config(text=" │ ".join(results), fg=COLORS['gold'])
         
     def _schedule_auto_deal(self):
